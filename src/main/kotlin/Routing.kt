@@ -20,8 +20,10 @@ import io.ktor.util.reflect.TypeInfo
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.charsets.Charset
 import com.google.protobuf.util.JsonFormat
+import io.ktor.serialization.kotlinx.json.json
 import io.ktor.utils.io.readRemaining
 import io.ktor.utils.io.core.readText
+import kotlinx.serialization.Serializable
 
 class ProtobufCustomerConverter : ContentConverter {
     override suspend fun serialize(
@@ -45,14 +47,19 @@ class ProtobufCustomerConverter : ContentConverter {
     }
 }
 
+@Serializable
+data class CustomerJson(val id: Int, val name: String)
+
 @OptIn(ExperimentalSerializationApi::class)
 fun Application.configureRouting() {
-    install(ContentNegotiation) {
-        register(ContentType.Application.Json, ProtobufCustomerConverter())
-    }
     install(RequestValidation) {
         validate<Customer> { customer ->
-            if (customer.id.toInt() <= 0)
+            if (customer.id <= 0)
+                ValidationResult.Invalid("Customer ID must be greater than 0")
+            else ValidationResult.Valid
+        }
+        validate<CustomerJson> { customer ->
+            if (customer.id <= 0)
                 ValidationResult.Invalid("Customer ID must be greater than 0")
             else ValidationResult.Valid
         }
@@ -69,9 +76,23 @@ fun Application.configureRouting() {
         get("/") {
             call.respondText("Hello World!")
         }
-        post("/customer") {
-            val customer = call.receive<Customer>()
-            call.respondText("Customer with ID ${customer.id} and name ${customer.name} created successfully!")
+        route("/customer") {
+            install(ContentNegotiation) {
+                register(ContentType.Application.Json, ProtobufCustomerConverter())
+            }
+            post {
+                val customer = call.receive<Customer>()
+                call.respondText("[json-protobuf] Customer with ID ${customer.id} and name ${customer.name} created successfully!")
+            }
+        }
+        route("/customer/json") {
+            install(ContentNegotiation) {
+                json()
+            }
+            post {
+                val customer = call.receive<CustomerJson>()
+                call.respondText("[json] Customer with ID ${customer.id} and name ${customer.name} created successfully!")
+            }
         }
     }
 }
