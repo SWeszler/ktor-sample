@@ -5,6 +5,7 @@ plugins {
     kotlin("jvm") version "2.1.10"
     id("io.ktor.plugin") version "3.1.2"
     kotlin("plugin.serialization").version("2.1.20")
+    id("com.google.protobuf") version "0.9.4"
 }
 
 group = "com.example"
@@ -19,6 +20,7 @@ application {
 
 repositories {
     mavenCentral()
+    google()
 }
 
 dependencies {
@@ -29,8 +31,28 @@ dependencies {
     implementation("io.ktor:ktor-server-core")
     implementation("io.ktor:ktor-server-config-yaml")
     implementation("io.ktor:ktor-serialization-kotlinx-json")
+    implementation("io.ktor:ktor-serialization-kotlinx-protobuf")
     implementation("io.ktor:ktor-server-content-negotiation")
     implementation("io.ktor:ktor-server-status-pages")
+    implementation("com.google.protobuf:protobuf-java:4.28.2")
+    implementation("com.google.protobuf:protobuf-kotlin:4.28.2")
+    implementation("io.grpc:grpc-protobuf:1.58.0")
+    implementation("io.grpc:grpc-stub:1.58.0")
+    implementation("io.grpc:grpc-netty-shaded:1.58.0")
+    implementation("com.google.protobuf:protobuf-java-util:4.28.2")
     testImplementation("io.ktor:ktor-server-test-host")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:3.24.3"
+    }
+    generateProtoTasks {
+        all().forEach { task ->
+            task.builtins {
+                create("kotlin")
+            }
+        }
+    }
 }

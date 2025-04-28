@@ -1,6 +1,5 @@
 package com.example
 
-import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.application.Application
 import io.ktor.server.plugins.requestvalidation.RequestValidation
@@ -12,14 +11,44 @@ import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.application.install
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.plugins.requestvalidation.RequestValidationException
-import kotlinx.serialization.Serializable
+import com.example.CustomerOuterClass.Customer
+import io.ktor.http.ContentType
+import io.ktor.http.content.OutgoingContent
+import kotlinx.serialization.ExperimentalSerializationApi
+import io.ktor.serialization.ContentConverter
+import io.ktor.util.reflect.TypeInfo
+import io.ktor.utils.io.ByteReadChannel
+import io.ktor.utils.io.charsets.Charset
+import com.google.protobuf.util.JsonFormat
+import io.ktor.utils.io.readRemaining
+import io.ktor.utils.io.core.readText
 
-@Serializable
-data class Customer(val id: String, val name: String)
+class ProtobufCustomerConverter : ContentConverter {
+    override suspend fun serialize(
+        contentType: ContentType,
+        charset: Charset,
+        typeInfo: TypeInfo,
+        value: Any?
+    ): OutgoingContent? {
+        TODO("Not yet implemented")
+    }
 
+    override suspend fun deserialize(
+        charset: Charset,
+        typeInfo: TypeInfo,
+        content: ByteReadChannel
+    ): Any? {
+        val jsonString = content.readRemaining().readText() // Correctly use readText from ByteReadPacket
+        val builder = Customer.newBuilder()
+        JsonFormat.parser().merge(jsonString, builder)
+        return builder.build()
+    }
+}
+
+@OptIn(ExperimentalSerializationApi::class)
 fun Application.configureRouting() {
     install(ContentNegotiation) {
-        json()
+        register(ContentType.Application.Json, ProtobufCustomerConverter())
     }
     install(RequestValidation) {
         validate<Customer> { customer ->
